@@ -1,9 +1,13 @@
 from flask import Flask
 from flask_cors import CORS
 from config.database import test_connection
+from routes.products import products_bp
 
 app = Flask(__name__)
 CORS(app)
+
+# Register blueprints
+app.register_blueprint(products_bp, url_prefix='/api')
 
 @app.route('/api/test', methods=['GET'])
 def test():
