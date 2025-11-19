@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Products - My Store</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/products.css">
+</head>
+<body>
+  
+  <header>
+    <div class="container">
+      <h1>My E-Commerce Store</h1>
+      <nav>
+        <a href="index.html">Home</a>
+        <a href="products.html">Products</a>
+        <a href="cart.html">Cart</a>
+      </nav>
+    </div>
+  </header>
+  
+  <main class="container">
+    <h2>Our Products</h2>
+    
+    <!-- Filters -->
+    <div class="filters">
+      <input type="text" id="search-input" placeholder="Search products...">
+      
+      <select id="category-filter">
+        <option value="">All Categories</option>
+        <option value="Electronics">Electronics</option>
+        <option value="Audio">Audio</option>
+        <option value="Wearables">Wearables</option>
+        <option value="Accessories">Accessories</option>
+        <option value="Cameras">Cameras</option>
+        <option value="Fashion">Fashion</option>
+      </select>
+      
+      <button onclick="applyFilters()">Search</button>
+    </div>
+    
+    <!-- Products Grid -->
+    <div id="products-container" class="products-grid">
+      <p>Loading products...</p>
+    </div>
+  </main>
+  
+  <script>
+    const API_URL = 'http://127.0.0.1:3000/api';
+    
+    // Load products on page load
+    async function loadProducts(filters = {}) {
+      try {
+        // Build query string
+        const params = new URLSearchParams(filters);
+        const url = `${API_URL}/products?${params}`;
+        
+        const response = await fetch(url);
+        const products = await response.json();
+        
+        displayProducts(products);
+        
+      } catch (error) {
+        console.error('Error loading products:', error);
+        document.getElementById('products-container').innerHTML = 
+          '<p style="color: red;">Failed to load products</p>';
+      }
+    }
+    
+    // Display products in grid
+    function displayProducts(products) {
+      const container = document.getElementById('products-container');
+      
+      if (products.length === 0) {
+        container.innerHTML = '<p>No products found</p>';
+        return;
+      }
+      
+      container.innerHTML = '';
+      
+      products.forEach(product => {
+        const card = document.createElement('div');
+        card.className = 'product-card';
+        
+        card.innerHTML = `
+          <img src="https://via.placeholder.com/300x200?text=${encodeURIComponent(product.name)}" 
+               alt="${product.name}">
+          <div class="product-info">
+            <h3>${product.name}</h3>
+            <p class="description">${product.description}</p>
+            <div class="product-footer">
+              <span class="price">$${product.price}</span>
+              <span class="stock">Stock: ${product.stock}</span>
+            </div>
+            <button class="btn-primary" onclick="addToCart(${product.id})">
+              Add to Cart
+            </button>
+          </div>
+        `;
+        
+        container.appendChild(card);
+      });
+    }
+    
+    // Apply filters
+    function applyFilters() {
+      const search = document.getElementById('search-input').value;
+      const category = document.getElementById('category-filter').value;
+      
+      const filters = {};
+      if (search) filters.search = search;
+      if (category) filters.category = category;
+      
+      loadProducts(filters);
+    }
+    
+    // Add to cart (placeholder)
+    async function addToCart(productId) {
+  try {
+    const response = await fetch(`${API_URL}/cart`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        user_id: 'test_user',
+        product_id: productId,
+        quantity: 1
+      })
+    });
+    
+    if (response.ok) {
+      alert('Product added to cart!');
+    } else {
+      alert('Failed to add to cart');
+    }
+    
+  } catch (error) {
+    console.error('Error:', error);
+    alert('Failed to add to cart');
+  }
+}
+    
+    // Load products when page loads
+    document.addEventListener('DOMContentLoaded', () => {
+      loadProducts();
+    });
+  </script>
+  
+</body>
+</html>

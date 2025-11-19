@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Order Confirmation - My Store</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/order.css">
+</head>
+<body>
+  
+  <header>
+    <div class="container">
+      <h1>My E-Commerce Store</h1>
+      <nav>
+        <a href="index.html">Home</a>
+        <a href="products.html">Products</a>
+        <a href="cart.html">Cart</a>
+      </nav>
+    </div>
+  </header>
+  
+  <main class="container">
+    <div class="confirmation-box">
+      <div class="success-icon">✓</div>
+      <h2>Order Placed Successfully!</h2>
+      <p>Thank you for your order. We'll send you a confirmation email shortly.</p>
+      
+      <div id="order-details">
+        <p>Loading order details...</p>
+      </div>
+      
+      <div class="actions">
+        <a href="products.html" class="btn-primary">Continue Shopping</a>
+        <a href="orders.html" class="btn-secondary">View My Orders</a>
+      </div>
+    </div>
+  </main>
+  
+  <script>
+    const API_URL = 'http://127.0.0.1:3000/api';
+    
+    async function loadOrderDetails() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const orderId = urlParams.get('id');
+      
+      if (!orderId) {
+        document.getElementById('order-details').innerHTML = 
+          '<p style="color: red;">No order ID provided</p>';
+        return;
+      }
+      
+      try {
+        const response = await fetch(`${API_URL}/orders/${orderId}`);
+        const order = await response.json();
+        
+        displayOrderDetails(order);
+        
+      } catch (error) {
+        console.error('Error:', error);
+        document.getElementById('order-details').innerHTML = 
+          '<p style="color: red;">Failed to load order details</p>';
+      }
+    }
+    
+    function displayOrderDetails(order) {
+      const container = document.getElementById('order-details');
+      
+      let itemsHtml = '';
+      order.items.forEach(item => {
+        itemsHtml += `
+          <div class="order-item">
+            <img src="https://via.placeholder.com/60?text=${encodeURIComponent(item.name)}" alt="${item.name}">
+            <div class="item-info">
+              <h4>${item.name}</h4>
+              <p>Quantity: ${item.quantity}</p>
+            </div>
+            <div class="item-price">$${(item.price * item.quantity).toFixed(2)}</div>
+          </div>
+        `;
+      });
+      
+      container.innerHTML = `
+        <div class="order-info">
+          <div class="info-row">
+            <span>Order ID:</span>
+            <span>#${order.id}</span>
+          </div>
+          <div class="info-row">
+            <span>Order Date:</span>
+            <span>${new Date(order.created_at).toLocaleDateString()}</span>
+          </div>
+          <div class="info-row">
+            <span>Status:</span>
+            <span class="status-badge">${order.status}</span>
+          </div>
+          <div class="info-row">
+            <span>Total Amount:</span>
+            <span class="total-amount">$${parseFloat(order.total_amount).toFixed(2)}</span>
+          </div>
+        </div>
+        
+        <div class="order-items-list">
+          <h3>Order Items</h3>
+          ${itemsHtml}
+        </div>
+        
+        <div class="shipping-info">
+          <h3>Shipping Address</h3>
+          <pre>${order.shipping_address}</pre>
+        </div>
+      `;
+    }
+    
+    document.addEventListener('DOMContentLoaded', () => {
+      loadOrderDetails();
+    });
+  </script>
+  
+</body>
+</html>
