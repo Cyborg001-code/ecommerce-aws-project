@@ -86,9 +86,9 @@ def login():
     cursor = conn.cursor()
     
     try:
-        # Find user
+        # Find user - ADD is_admin to SELECT
         cursor.execute("""
-            SELECT id, name, email, password 
+            SELECT id, name, email, password, is_admin 
             FROM users 
             WHERE email = %s
         """, (email,))
@@ -106,12 +106,14 @@ def login():
         # Generate token
         token = generate_token()
         
+        # Return with is_admin status
         return jsonify({
             'message': 'Login successful',
             'user': {
                 'id': user['id'],
                 'name': user['name'],
-                'email': user['email']
+                'email': user['email'],
+                'is_admin': user['is_admin']  # ADD THIS
             },
             'token': token
         }), 200
@@ -123,7 +125,6 @@ def login():
     finally:
         cursor.close()
         conn.close()
-
 
 @auth_bp.route('/auth/logout', methods=['POST'])
 def logout():

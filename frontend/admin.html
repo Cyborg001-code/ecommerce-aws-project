@@ -266,5 +266,16 @@
     });
   </script>
   <script src="js/auth-check.js"></script>
+<script>
+  // Check if user is admin before loading page
+  document.addEventListener('DOMContentLoaded', () => {
+    const user = JSON.parse(localStorage.getItem('user'));
+    
+    if (!user || !user.is_admin) {
+      alert('Access denied! Admin privileges required.');
+      window.location.href = 'login.html';
+    }
+  });
+</script>
 </body>
 </html>

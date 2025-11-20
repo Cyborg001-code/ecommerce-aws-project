@@ -5,12 +5,18 @@ function updateAuthUI() {
   
   if (user) {
     // User is logged in
-    const authLinks = `
+    let authLinks = `
       <span style="color: var(--primary); font-weight: 600;">
         Hello, ${user.name}!
       </span>
-      <a href="#" onclick="logout()">Logout</a>
     `;
+    
+    // Show Admin Panel link only for admins
+    if (user.is_admin) {
+      authLinks += `<a href="admin.html" style="color: var(--danger); font-weight: 700;">Admin Panel</a>`;
+    }
+    
+    authLinks += `<a href="#" onclick="logout()">Logout</a>`;
     
     // Add to navigation
     if (!header.querySelector('.auth-links')) {
@@ -42,6 +48,16 @@ function logout() {
     localStorage.removeItem('user');
     localStorage.removeItem('token');
     alert('Logged out successfully!');
+    window.location.href = 'index.html';
+  }
+}
+
+// Protect admin page
+function requireAdmin() {
+  const user = JSON.parse(localStorage.getItem('user'));
+  
+  if (!user || !user.is_admin) {
+    alert('Access denied! Admin privileges required.');
     window.location.href = 'index.html';
   }
 }

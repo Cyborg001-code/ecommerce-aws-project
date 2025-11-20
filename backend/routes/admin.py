@@ -3,16 +3,30 @@ from config.database import get_db_connection
 import boto3
 import os
 from werkzeug.utils import secure_filename
+from dotenv import load_dotenv
+
+load_dotenv()
 
 admin_bp = Blueprint('admin', __name__)
 
-# S3 client (for image upload)
-s3_client = boto3.client('s3', region_name=os.getenv('AWS_REGION', 'us-east-1'))
-BUCKET_NAME = 'ecommerce-images-ankush-2024'  # Replace with your bucket name
+# S3 Configuration
+AWS_ACCESS_KEY = os.getenv('AWS_ACCESS_KEY_ID')
+AWS_SECRET_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
+AWS_REGION = os.getenv('AWS_REGION', 'us-east-1')
+IMAGES_BUCKET = os.getenv('S3_IMAGES_BUCKET', 'ecommerce-images-ankush-2025')
+
+# Initialize S3 client
+s3_client = boto3.client(
+    's3',
+    aws_access_key_id=AWS_ACCESS_KEY,
+    aws_secret_access_key=AWS_SECRET_KEY,
+    region_name=AWS_REGION
+)
+
 
 @admin_bp.route('/admin/upload-image', methods=['POST'])
 def upload_image():
-    """Upload product image to S3"""
+    """Upload product image to S3 images bucket"""
     
     if 'image' not in request.files:
         return jsonify({'error': 'No image file provided'}), 400
@@ -23,23 +37,42 @@ def upload_image():
     if not image_key:
         return jsonify({'error': 'Image key required'}), 400
     
+    if not file.filename:
+        return jsonify({'error': 'No file selected'}), 400
+    
+    # Validate file type
+    allowed_extensions = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+    file_ext = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else ''
+    
+    if file_ext not in allowed_extensions:
+        return jsonify({'error': 'Invalid file type. Allowed: PNG, JPG, JPEG, GIF, WEBP'}), 400
+    
     try:
-        # Upload to S3
+        # Upload to S3 images bucket
         s3_client.upload_fileobj(
             file,
-            BUCKET_NAME,
+            IMAGES_BUCKET,
             image_key,
-            ExtraArgs={'ContentType': file.content_type, 'ACL': 'public-read'}
+            ExtraArgs={
+                'ContentType': file.content_type,
+                'ACL': 'public-read'  # Make image publicly readable
+            }
         )
+        
+        # Generate public URL
+        image_url = f"https://{IMAGES_BUCKET}.s3.{AWS_REGION}.amazonaws.com/{image_key}"
+        
+        print(f"✅ Image uploaded successfully to {IMAGES_BUCKET}/{image_key}")
         
         return jsonify({
             'message': 'Image uploaded successfully',
-            'image_key': image_key
+            'image_key': image_key,
+            'image_url': image_url
         }), 200
         
     except Exception as e:
-        print(f"Error uploading image: {e}")
-        return jsonify({'error': 'Failed to upload image'}), 500
+        print(f"❌ Error uploading image to S3: {e}")
+        return jsonify({'error': f'Failed to upload image: {str(e)}'}), 500
 
 
 @admin_bp.route('/admin/products', methods=['POST'])
@@ -47,6 +80,12 @@ def create_product():
     """Create new product"""
     
     data = request.json
+    
+    # Validate required fields
+    required_fields = ['name', 'description', 'price', 'category', 'stock', 'image_key']
+    for field in required_fields:
+        if field not in data:
+            return jsonify({'error': f'{field} is required'}), 400
     
     conn = get_db_connection()
     if not conn:
@@ -71,10 +110,15 @@ def create_product():
         product_id = cursor.fetchone()['id']
         conn.commit()
         
-        return jsonify({'message': 'Product created', 'id': product_id}), 200
+        print(f"✅ Product created with ID: {product_id}")
+        
+        return jsonify({
+            'message': 'Product created successfully',
+            'id': product_id
+        }), 200
         
     except Exception as e:
-        print(f"Error creating product: {e}")
+        print(f"❌ Error creating product: {e}")
         conn.rollback()
         return jsonify({'error': 'Failed to create product'}), 500
         
@@ -126,10 +170,10 @@ def update_product(product_id):
         
         conn.commit()
         
-        return jsonify({'message': 'Product updated'}), 200
+        return jsonify({'message': 'Product updated successfully'}), 200
         
     except Exception as e:
-        print(f"Error updating product: {e}")
+        print(f"❌ Error updating product: {e}")
         conn.rollback()
         return jsonify({'error': 'Failed to update product'}), 500
         
@@ -149,13 +193,18 @@ def delete_product(product_id):
     cursor = conn.cursor()
     
     try:
-        cursor.execute("UPDATE products SET is_active = false WHERE id = %s", (product_id,))
+        cursor.execute("""
+            UPDATE products 
+            SET is_active = false 
+            WHERE id = %s
+        """, (product_id,))
+        
         conn.commit()
         
-        return jsonify({'message': 'Product deleted'}), 200
+        return jsonify({'message': 'Product deleted successfully'}), 200
         
     except Exception as e:
-        print(f"Error deleting product: {e}")
+        print(f"❌ Error deleting product: {e}")
         conn.rollback()
         return jsonify({'error': 'Failed to delete product'}), 500
         
