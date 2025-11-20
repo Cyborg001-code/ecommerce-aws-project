@@ -90,8 +90,9 @@
         cartItem.className = 'cart-item';
         
         cartItem.innerHTML = `
-          <img src="https://via.placeholder.com/100?text=${encodeURIComponent(item.name)}" 
-               alt="${item.name}">
+          <img src="${item.imageUrl}" 
+          alt="${item.name}"
+          onerror="this.src='https://via.placeholder.com/100?text=${encodeURIComponent(item.name)}'">
           <div class="item-details">
             <h3>${item.name}</h3>
             <p class="item-price">$${item.price}</p>

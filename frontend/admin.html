@@ -195,8 +195,8 @@
         card.className = 'admin-product-card';
         
         card.innerHTML = `
-          <img src="https://via.placeholder.com/100?text=${encodeURIComponent(product.name)}" 
-               alt="${product.name}">
+          <img src="${product.imageUrl}" 
+              onerror="this.src='https://via.placeholder.com/100?text=${encodeURIComponent(product.name)}'"
           <div class="product-details">
             <h3>${product.name}</h3>
             <p>${product.category}</p>

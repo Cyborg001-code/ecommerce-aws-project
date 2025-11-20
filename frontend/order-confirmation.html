@@ -64,53 +64,55 @@
     }
     
     function displayOrderDetails(order) {
-      const container = document.getElementById('order-details');
-      
-      let itemsHtml = '';
-      order.items.forEach(item => {
-        itemsHtml += `
-          <div class="order-item">
-            <img src="https://via.placeholder.com/60?text=${encodeURIComponent(item.name)}" alt="${item.name}">
-            <div class="item-info">
-              <h4>${item.name}</h4>
-              <p>Quantity: ${item.quantity}</p>
-            </div>
-            <div class="item-price">$${(item.price * item.quantity).toFixed(2)}</div>
-          </div>
-        `;
-      });
-      
-      container.innerHTML = `
-        <div class="order-info">
-          <div class="info-row">
-            <span>Order ID:</span>
-            <span>#${order.id}</span>
-          </div>
-          <div class="info-row">
-            <span>Order Date:</span>
-            <span>${new Date(order.created_at).toLocaleDateString()}</span>
-          </div>
-          <div class="info-row">
-            <span>Status:</span>
-            <span class="status-badge">${order.status}</span>
-          </div>
-          <div class="info-row">
-            <span>Total Amount:</span>
-            <span class="total-amount">$${parseFloat(order.total_amount).toFixed(2)}</span>
-          </div>
+  const container = document.getElementById('order-details');
+  
+  let itemsHtml = '';
+  order.items.forEach(item => {
+    itemsHtml += `
+      <div class="order-item">
+        <img src="${item.imageUrl}" 
+             alt="${item.name}"
+             onerror="this.src='https://via.placeholder.com/60?text=${encodeURIComponent(item.name)}'">
+        <div class="item-info">
+          <h4>${item.name}</h4>
+          <p>Quantity: ${item.quantity}</p>
         </div>
-        
-        <div class="order-items-list">
-          <h3>Order Items</h3>
-          ${itemsHtml}
-        </div>
-        
-        <div class="shipping-info">
-          <h3>Shipping Address</h3>
-          <pre>${order.shipping_address}</pre>
-        </div>
-      `;
-    }
+        <div class="item-price">$${(item.price * item.quantity).toFixed(2)}</div>
+      </div>
+    `;
+  });
+  
+  container.innerHTML = `
+    <div class="order-info">
+      <div class="info-row">
+        <span>Order ID:</span>
+        <span>#${order.id}</span>
+      </div>
+      <div class="info-row">
+        <span>Order Date:</span>
+        <span>${new Date(order.created_at).toLocaleDateString()}</span>
+      </div>
+      <div class="info-row">
+        <span>Status:</span>
+        <span class="status-badge">${order.status}</span>
+      </div>
+      <div class="info-row">
+        <span>Total Amount:</span>
+        <span class="total-amount">$${parseFloat(order.total_amount).toFixed(2)}</span>
+      </div>
+    </div>
+    
+    <div class="order-items-list">
+      <h3>Order Items</h3>
+      ${itemsHtml}
+    </div>
+    
+    <div class="shipping-info">
+      <h3>Shipping Address</h3>
+      <pre>${order.shipping_address}</pre>
+    </div>
+  `;
+}
     
     document.addEventListener('DOMContentLoaded', () => {
       loadOrderDetails();
