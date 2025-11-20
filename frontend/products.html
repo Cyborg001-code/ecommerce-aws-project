@@ -6,6 +6,7 @@
   <title>Products - My Store</title>
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/products.css">
+  <link rel="stylesheet" href="css/loading.css">
 </head>
 <body>
   
@@ -13,10 +14,14 @@
     <div class="container">
       <h1>My E-Commerce Store</h1>
       <nav>
-        <a href="index.html">Home</a>
-        <a href="products.html">Products</a>
-        <a href="cart.html">Cart</a>
-      </nav>
+  <a href="index.html">Home</a>
+  <a href="products.html">Products</a>
+  <a href="cart.html" style="position: relative;">
+    Cart
+    <span id="cart-badge" class="cart-badge" style="display: none;">0</span>
+  </a>
+  <a href="orders.html">My Orders</a>
+</nav>
     </div>
   </header>
   
@@ -48,6 +53,80 @@
   
   <script>
     const API_URL = 'http://127.0.0.1:3000/api';
+
+    // Load categories dynamically
+    async function loadCategories() {
+      try {
+        const response = await fetch(`${API_URL}/categories`);
+         const categories = await response.json();
+    
+        const select = document.getElementById('category-filter');
+    
+        // Clear existing options except "All Categories"
+         select.innerHTML = '<option value="">All Categories</option>';
+    
+       // Add categories from database
+        categories.forEach(category => {
+          const option = document.createElement('option');
+           option.value = category;
+           option.textContent = category;
+          select.appendChild(option);
+    });
+    
+  } catch (error) {
+    console.error('Error loading categories:', error);
+  }
+}
+
+    // Call on page load
+      document.addEventListener('DOMContentLoaded', () => {
+      loadProducts();
+      loadCategories(); // Add this line
+      updateCartCount();
+});
+
+    
+      // Show loading skeleton
+function showLoading() {
+  const container = document.getElementById('products-container');
+  container.innerHTML = '';
+  
+  // Create 6 skeleton cards
+  for (let i = 0; i < 6; i++) {
+    const skeleton = document.createElement('div');
+    skeleton.className = 'skeleton-card';
+    skeleton.innerHTML = `
+      <div class="skeleton-image"></div>
+      <div style="padding: 20px;">
+        <div class="skeleton-text title"></div>
+        <div class="skeleton-text description"></div>
+        <div class="skeleton-text description"></div>
+        <div class="skeleton-text price"></div>
+      </div>
+    `;
+    container.appendChild(skeleton);
+  }
+}
+
+// Update loadProducts to use it
+async function loadProducts(filters = {}) {
+  try {
+    showLoading(); // Show skeleton
+    
+    const params = new URLSearchParams(filters);
+    const url = `${API_URL}/products?${params}`;
+    
+    const response = await fetch(url);
+    const products = await response.json();
+    
+    displayProducts(products);
+    
+  } catch (error) {
+    console.error('Error loading products:', error);
+    document.getElementById('products-container').innerHTML = 
+      '<div class="error-message">Failed to load products. Please try again.</div>';
+  }
+}
     
     // Load products on page load
     async function loadProducts(filters = {}) {

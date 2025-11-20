@@ -48,7 +48,7 @@ def get_products():
         products = cursor.fetchall()
         
         # Add image URLs
-        bucket_name = os.getenv('S3_IMAGES_BUCKET', 'ecommerce-images-ankush-2024')
+        bucket_name = os.getenv('S3_IMAGES_BUCKET', 'ecommerce-images-ankush-2025')
         region = os.getenv('AWS_REGION', 'us-east-1')
         
         for product in products:
@@ -86,7 +86,7 @@ def get_product(product_id):
             return jsonify({'error': 'Product not found'}), 404
         
         # Add image URL
-        bucket_name = os.getenv('S3_IMAGES_BUCKET', 'ecommerce-images-ankush-2024')
+        bucket_name = os.getenv('S3_IMAGES_BUCKET', 'ecommerce-images-ankush-2025')
         region = os.getenv('AWS_REGION', 'us-east-1')
         
         if product.get('image_key'):
@@ -99,6 +99,36 @@ def get_product(product_id):
     except Exception as e:
         print(f"Error fetching product: {e}")
         return jsonify({'error': 'Failed to fetch product'}), 500
+        
+    finally:
+        cursor.close()
+        conn.close()
+
+@products_bp.route('/categories', methods=['GET'])
+def get_categories():
+    """Get all unique product categories"""
+    
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({'error': 'Database connection failed'}), 500
+    
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute("""
+            SELECT DISTINCT category 
+            FROM products 
+            WHERE is_active = true AND category IS NOT NULL
+            ORDER BY category
+        """)
+        
+        categories = [row['category'] for row in cursor.fetchall()]
+        
+        return jsonify(categories), 200
+        
+    except Exception as e:
+        print(f"Error fetching categories: {e}")
+        return jsonify({'error': 'Failed to fetch categories'}), 500
         
     finally:
         cursor.close()

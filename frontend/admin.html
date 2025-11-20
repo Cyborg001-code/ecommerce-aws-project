@@ -6,6 +6,7 @@
   <title>Admin Panel - My Store</title>
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/admin.css">
+  <link rel="stylesheet" href="css/loading.css">
 </head>
 <body>
   
@@ -13,15 +14,43 @@
     <div class="container">
       <h1>Admin Panel</h1>
       <nav>
-        <a href="index.html">View Store</a>
-        <a href="admin.html">Manage Products</a>
-      </nav>
+  <a href="index.html">Home</a>
+  <a href="products.html">Products</a>
+  <a href="cart.html" style="position: relative;">
+    Cart
+    <span id="cart-badge" class="cart-badge" style="display: none;">0</span>
+  </a>
+  <a href="orders.html">My Orders</a>
+</nav>
     </div>
   </header>
   
   <main class="container">
     <div class="admin-container">
       
+      <div class="products-list-section">
+  <h2>Manage Products</h2>
+  
+  <!-- Add Search Bar -->
+  <div class="admin-search">
+      <input type="text" id="admin-search" placeholder="Search products...">
+      <select id="admin-category-filter">
+        <option value="">All Categories</option>
+        <option value="Electronics">Electronics</option>
+        <option value="Audio">Audio</option>
+        <option value="Wearables">Wearables</option>
+        <option value="Accessories">Accessories</option>
+        <option value="Cameras">Cameras</option>
+        <option value="Fashion">Fashion</option>
+       </select>
+       <button onclick="filterAdminProducts()" class="btn-filter">Filter</button>
+     </div>
+  
+      <div id="products-list">
+       <p>Loading products...</p>
+      </div>
+    </div>
+
       <!-- Add New Product -->
       <div class="add-product-section">
         <h2>Add New Product</h2>
@@ -87,7 +116,37 @@
   
   <script>
     const API_URL = 'http://127.0.0.1:3000/api';
+    // Load categories dynamically
+    async function loadCategories() {
+      try {
+         const response = await fetch(`${API_URL}/categories`);
+         const categories = await response.json();
     
+          const select = document.getElementById('category-filter');
+    
+         // Clear existing options except "All Categories"
+         select.innerHTML = '<option value="">All Categories</option>';
+    
+         // Add categories from database
+        categories.forEach(category => {
+        const option = document.createElement('option');
+         option.value = category;
+         option.textContent = category;
+          select.appendChild(option);
+      });
+    
+     } catch (error) {
+        console.error('Error loading categories:', error);
+      }
+      }
+
+        // Call on page load
+          document.addEventListener('DOMContentLoaded', () => {
+          loadProducts();
+          loadCategories(); // Add this line
+         updateCartCount();
+      });
+
     // Preview image before upload
     document.getElementById('product-image').addEventListener('change', function(e) {
       const file = e.target.files[0];
@@ -264,6 +323,24 @@
     document.addEventListener('DOMContentLoaded', () => {
       loadProducts();
     });
+
+    async function filterAdminProducts() {
+  const search = document.getElementById('admin-search').value;
+  const category = document.getElementById('admin-category-filter').value;
+  
+  const params = new URLSearchParams();
+  if (search) params.append('search', search);
+  if (category) params.append('category', category);
+  
+  try {
+    const response = await fetch(`${API_URL}/products?${params}`);
+    const products = await response.json();
+    displayProducts(products);
+  } catch (error) {
+    console.error('Error:', error);
+  }
+}
+
   </script>
   <script src="js/auth-check.js"></script>
 <script>
