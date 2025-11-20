@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Panel - My Store</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+  
+  <header>
+    <div class="container">
+      <h1>Admin Panel</h1>
+      <nav>
+        <a href="index.html">View Store</a>
+        <a href="admin.html">Manage Products</a>
+      </nav>
+    </div>
+  </header>
+  
+  <main class="container">
+    <div class="admin-container">
+      
+      <!-- Add New Product -->
+      <div class="add-product-section">
+        <h2>Add New Product</h2>
+        
+        <form id="add-product-form" enctype="multipart/form-data">
+          <div class="form-group">
+            <label>Product Name *</label>
+            <input type="text" id="product-name" required>
+          </div>
+          
+          <div class="form-group">
+            <label>Description *</label>
+            <textarea id="product-description" rows="3" required></textarea>
+          </div>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label>Price ($) *</label>
+              <input type="number" id="product-price" step="0.01" required>
+            </div>
+            
+            <div class="form-group">
+              <label>Stock *</label>
+              <input type="number" id="product-stock" required>
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label>Category *</label>
+            <select id="product-category" required>
+              <option value="">Select Category</option>
+              <option value="Electronics">Electronics</option>
+              <option value="Audio">Audio</option>
+              <option value="Wearables">Wearables</option>
+              <option value="Accessories">Accessories</option>
+              <option value="Cameras">Cameras</option>
+              <option value="Fashion">Fashion</option>
+            </select>
+          </div>
+          
+          <div class="form-group">
+            <label>Product Image *</label>
+            <input type="file" id="product-image" accept="image/*" required>
+            <small>Accepted: JPG, PNG (Max 5MB)</small>
+          </div>
+          
+          <div class="image-preview" id="image-preview"></div>
+          
+          <button type="submit" class="btn-add">Add Product</button>
+        </form>
+      </div>
+      
+      <!-- Existing Products -->
+      <div class="products-list-section">
+        <h2>Manage Products</h2>
+        <div id="products-list">
+          <p>Loading products...</p>
+        </div>
+      </div>
+      
+    </div>
+  </main>
+  
+  <script>
+    const API_URL = 'http://127.0.0.1:3000/api';
+    
+    // Preview image before upload
+    document.getElementById('product-image').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(event) {
+          document.getElementById('image-preview').innerHTML = 
+            `<img src="${event.target.result}" alt="Preview">`;
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+    
+    // Add new product
+    document.getElementById('add-product-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const name = document.getElementById('product-name').value;
+      const description = document.getElementById('product-description').value;
+      const price = document.getElementById('product-price').value;
+      const stock = document.getElementById('product-stock').value;
+      const category = document.getElementById('product-category').value;
+      const imageFile = document.getElementById('product-image').files[0];
+      
+      if (!imageFile) {
+        alert('Please select an image');
+        return;
+      }
+      
+      // Create image filename
+      const imageKey = `products/${Date.now()}-${imageFile.name.replace(/\s/g, '-')}`;
+      
+      try {
+        // First, upload image to S3 (we'll implement the upload endpoint)
+        const formData = new FormData();
+        formData.append('image', imageFile);
+        formData.append('image_key', imageKey);
+        
+        const uploadResponse = await fetch(`${API_URL}/admin/upload-image`, {
+          method: 'POST',
+          body: formData
+        });
+        
+        if (!uploadResponse.ok) {
+          throw new Error('Image upload failed');
+        }
+        
+        // Then, create product in database
+        const productResponse = await fetch(`${API_URL}/admin/products`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name,
+            description,
+            price: parseFloat(price),
+            stock: parseInt(stock),
+            category,
+            image_key: imageKey
+          })
+        });
+        
+        if (productResponse.ok) {
+          alert('Product added successfully!');
+          document.getElementById('add-product-form').reset();
+          document.getElementById('image-preview').innerHTML = '';
+          loadProducts();
+        } else {
+          alert('Failed to add product');
+        }
+        
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Failed to add product: ' + error.message);
+      }
+    });
+    
+    // Load existing products
+    async function loadProducts() {
+      try {
+        const response = await fetch(`${API_URL}/products`);
+        const products = await response.json();
+        
+        displayProducts(products);
+        
+      } catch (error) {
+        console.error('Error:', error);
+        document.getElementById('products-list').innerHTML = 
+          '<p style="color: red;">Failed to load products</p>';
+      }
+    }
+    
+    // Display products
+    function displayProducts(products) {
+      const container = document.getElementById('products-list');
+      
+      if (products.length === 0) {
+        container.innerHTML = '<p>No products found</p>';
+        return;
+      }
+      
+      container.innerHTML = '';
+      
+      products.forEach(product => {
+        const card = document.createElement('div');
+        card.className = 'admin-product-card';
+        
+        card.innerHTML = `
+          <img src="https://via.placeholder.com/100?text=${encodeURIComponent(product.name)}" 
+               alt="${product.name}">
+          <div class="product-details">
+            <h3>${product.name}</h3>
+            <p>${product.category}</p>
+            <p class="price">$${product.price}</p>
+          </div>
+          <div class="product-stock">
+            <label>Stock:</label>
+            <input type="number" value="${product.stock}" 
+                   onchange="updateStock(${product.id}, this.value)">
+          </div>
+          <div class="product-actions">
+            <button onclick="editProduct(${product.id})" class="btn-edit">Edit</button>
+            <button onclick="deleteProduct(${product.id})" class="btn-delete">Delete</button>
+          </div>
+        `;
+        
+        container.appendChild(card);
+      });
+    }
+    
+    // Update stock
+    async function updateStock(productId, newStock) {
+      try {
+        const response = await fetch(`${API_URL}/admin/products/${productId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ stock: parseInt(newStock) })
+        });
+        
+        if (response.ok) {
+          alert('Stock updated!');
+        } else {
+          alert('Failed to update stock');
+        }
+        
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Failed to update stock');
+      }
+    }
+    
+    // Delete product
+    async function deleteProduct(productId) {
+      if (!confirm('Are you sure you want to delete this product?')) return;
+      
+      try {
+        const response = await fetch(`${API_URL}/admin/products/${productId}`, {
+          method: 'DELETE'
+        });
+        
+        if (response.ok) {
+          alert('Product deleted!');
+          loadProducts();
+        } else {
+          alert('Failed to delete product');
+        }
+        
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Failed to delete product');
+      }
+    }
+    
+    // Load products on page load
+    document.addEventListener('DOMContentLoaded', () => {
+      loadProducts();
+    });
+  </script>
+  <script src="js/auth-check.js"></script>
+</body>
+</html>
