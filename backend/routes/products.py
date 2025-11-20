@@ -1,5 +1,6 @@
 from flask import Blueprint, jsonify, request
 from config.database import get_db_connection
+import os
 
 products_bp = Blueprint('products', __name__)
 
@@ -47,11 +48,14 @@ def get_products():
         products = cursor.fetchall()
         
         # Add image URLs
-        cloudfront_domain = os.getenv('S3_IMAGES_BUCKET', 'ecommerce-images-ankush-2025')
+        bucket_name = os.getenv('S3_IMAGES_BUCKET', 'ecommerce-images-ankush-2024')
         region = os.getenv('AWS_REGION', 'us-east-1')
-
+        
         for product in products:
-            product['imageUrl'] = f"https://{cloudfront_domain}.s3.{region}.amazonaws.com/{product['image_key']}"
+            if product.get('image_key'):
+                product['imageUrl'] = f"https://{bucket_name}.s3.{region}.amazonaws.com/{product['image_key']}"
+            else:
+                product['imageUrl'] = f"https://via.placeholder.com/300x200?text={product['name']}"
         
         return jsonify(products), 200
         
@@ -82,11 +86,13 @@ def get_product(product_id):
             return jsonify({'error': 'Product not found'}), 404
         
         # Add image URL
-        cloudfront_domain = os.getenv('S3_IMAGES_BUCKET', 'ecommerce-images-ankush-2025')
+        bucket_name = os.getenv('S3_IMAGES_BUCKET', 'ecommerce-images-ankush-2024')
         region = os.getenv('AWS_REGION', 'us-east-1')
         
-        for product in products:
-            product['imageUrl'] = f"https://{cloudfront_domain}.s3.{region}.amazonaws.com/{product['image_key']}"
+        if product.get('image_key'):
+            product['imageUrl'] = f"https://{bucket_name}.s3.{region}.amazonaws.com/{product['image_key']}"
+        else:
+            product['imageUrl'] = f"https://via.placeholder.com/300x200?text={product['name']}"
         
         return jsonify(product), 200
         

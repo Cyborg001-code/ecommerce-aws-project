@@ -48,14 +48,14 @@ def upload_image():
         return jsonify({'error': 'Invalid file type. Allowed: PNG, JPG, JPEG, GIF, WEBP'}), 400
     
     try:
-        # Upload to S3 images bucket
+        # Upload to S3 images bucket (WITHOUT ACL)
         s3_client.upload_fileobj(
             file,
             IMAGES_BUCKET,
             image_key,
             ExtraArgs={
-                'ContentType': file.content_type,
-                'ACL': 'public-read'  # Make image publicly readable
+                'ContentType': file.content_type
+                # No ACL - bucket policy handles public access
             }
         )
         
