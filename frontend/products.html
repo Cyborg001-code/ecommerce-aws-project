@@ -14,21 +14,20 @@
     <div class="container">
       <h1>My E-Commerce Store</h1>
       <nav>
-  <a href="index.html">Home</a>
-  <a href="products.html">Products</a>
-  <a href="cart.html" style="position: relative;">
-    Cart
-    <span id="cart-badge" class="cart-badge" style="display: none;">0</span>
-  </a>
-  <a href="orders.html">My Orders</a>
-</nav>
+        <a href="index.html">Home</a>
+        <a href="products.html">Products</a>
+        <a href="cart.html">
+          Cart 
+          <span id="cart-badge" class="cart-badge" style="display:none;">0</span>
+        </a>
+        <a href="orders.html">My Orders</a>
+      </nav>
     </div>
   </header>
   
   <main class="container">
     <h2>Our Products</h2>
     
-    <!-- Filters -->
     <div class="filters">
       <input type="text" id="search-input" placeholder="Search products...">
       
@@ -45,187 +44,24 @@
       <button onclick="applyFilters()">Search</button>
     </div>
     
-    <!-- Products Grid -->
     <div id="products-container" class="products-grid">
       <p>Loading products...</p>
     </div>
   </main>
   
-  <script>
-    const API_URL = 'http://127.0.0.1:3000/api';
-
-    // Load categories dynamically
-    async function loadCategories() {
-      try {
-        const response = await fetch(`${API_URL}/categories`);
-         const categories = await response.json();
-    
-        const select = document.getElementById('category-filter');
-    
-        // Clear existing options except "All Categories"
-         select.innerHTML = '<option value="">All Categories</option>';
-    
-       // Add categories from database
-        categories.forEach(category => {
-          const option = document.createElement('option');
-           option.value = category;
-           option.textContent = category;
-          select.appendChild(option);
-    });
-    
-  } catch (error) {
-    console.error('Error loading categories:', error);
-  }
-}
-
-    // Call on page load
-      document.addEventListener('DOMContentLoaded', () => {
-      loadProducts();
-      loadCategories(); // Add this line
-      updateCartCount();
-});
-
-    
-      // Show loading skeleton
-function showLoading() {
-  const container = document.getElementById('products-container');
-  container.innerHTML = '';
+  <footer>
+    <div class="container">
+      <p>&copy; 2025 My E-Commerce Store. All rights reserved.</p>
+    </div>
+  </footer>
   
-  // Create 6 skeleton cards
-  for (let i = 0; i < 6; i++) {
-    const skeleton = document.createElement('div');
-    skeleton.className = 'skeleton-card';
-    skeleton.innerHTML = `
-      <div class="skeleton-image"></div>
-      <div style="padding: 20px;">
-        <div class="skeleton-text title"></div>
-        <div class="skeleton-text description"></div>
-        <div class="skeleton-text description"></div>
-        <div class="skeleton-text price"></div>
-      </div>
-    `;
-    container.appendChild(skeleton);
-  }
-}
-
-// Update loadProducts to use it
-async function loadProducts(filters = {}) {
-  try {
-    showLoading(); // Show skeleton
-    
-    const params = new URLSearchParams(filters);
-    const url = `${API_URL}/products?${params}`;
-    
-    const response = await fetch(url);
-    const products = await response.json();
-    
-    displayProducts(products);
-    
-  } catch (error) {
-    console.error('Error loading products:', error);
-    document.getElementById('products-container').innerHTML = 
-      '<div class="error-message">Failed to load products. Please try again.</div>';
-  }
-}
-    
-    // Load products on page load
-    async function loadProducts(filters = {}) {
-      try {
-        // Build query string
-        const params = new URLSearchParams(filters);
-        const url = `${API_URL}/products?${params}`;
-        
-        const response = await fetch(url);
-        const products = await response.json();
-        
-        displayProducts(products);
-        
-      } catch (error) {
-        console.error('Error loading products:', error);
-        document.getElementById('products-container').innerHTML = 
-          '<p style="color: red;">Failed to load products</p>';
-      }
-    }
-    
-    // Display products in grid
-    function displayProducts(products) {
-  const container = document.getElementById('products-container');
+  <!-- External Scripts -->
+  <script src="js/config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/main.js"></script>
+  <script src="js/products.js"></script>
   
-  if (products.length === 0) {
-    container.innerHTML = '<p>No products found</p>';
-    return;
-  }
-  
-  container.innerHTML = '';
-  
-  products.forEach(product => {
-    const card = document.createElement('div');
-    card.className = 'product-card';
-    
-    card.innerHTML = `
-      <img src="${product.imageUrl}" 
-           alt="${product.name}"
-           onerror="this.src='https://via.placeholder.com/300x200?text=${encodeURIComponent(product.name)}'">
-      <div class="product-info">
-        <h3>${product.name}</h3>
-        <p class="description">${product.description || ''}</p>
-        <div class="product-footer">
-          <span class="price">$${product.price}</span>
-          <span class="stock">Stock: ${product.stock}</span>
-        </div>
-        ${product.stock > 0 ? 
-          `<button class="btn-primary" onclick="addToCart(${product.id})">Add to Cart</button>` :
-          `<button class="btn-primary" disabled style="opacity: 0.5;">Out of Stock</button>`
-        }
-      </div>
-    `;
-    
-    container.appendChild(card);
-  });
-}
-    
-    // Apply filters
-    function applyFilters() {
-      const search = document.getElementById('search-input').value;
-      const category = document.getElementById('category-filter').value;
-      
-      const filters = {};
-      if (search) filters.search = search;
-      if (category) filters.category = category;
-      
-      loadProducts(filters);
-    }
-    
-    // Add to cart (placeholder)
-    async function addToCart(productId) {
-  try {
-    const response = await fetch(`${API_URL}/cart`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        user_id: 'test_user',
-        product_id: productId,
-        quantity: 1
-      })
-    });
-    
-    if (response.ok) {
-      alert('Product added to cart!');
-    } else {
-      alert('Failed to add to cart');
-    }
-    
-  } catch (error) {
-    console.error('Error:', error);
-    alert('Failed to add to cart');
-  }
-}
-    
-    // Load products when page loads
-    document.addEventListener('DOMContentLoaded', () => {
-      loadProducts();
-    });
-  </script>
-  <script src="js/auth-check.js"></script>
 </body>
 </html>

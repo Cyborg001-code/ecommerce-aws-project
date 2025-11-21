@@ -3,50 +3,55 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>E-Commerce Store</title>
+  <title>Home - My E-Commerce Store</title>
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/loading.css">
 </head>
 <body>
   
   <header>
-  <div class="container">
-    <div class="logo">
+    <div class="container">
       <h1>My E-Commerce Store</h1>
+      <nav>
+        <a href="index.html">Home</a>
+        <a href="products.html">Products</a>
+        <a href="cart.html">
+          Cart 
+          <span id="cart-badge" class="cart-badge" style="display:none;">0</span>
+        </a>
+        <a href="orders.html">My Orders</a>
+      </nav>
     </div>
-    
-   <nav>
-  <a href="index.html">Home</a>
-  <a href="products.html">Products</a>
-  <a href="cart.html" style="position: relative;">
-    Cart
-    <span id="cart-badge" class="cart-badge" style="display: none;">0</span>
-  </a>
-  <a href="orders.html">My Orders</a>
-</nav>
-  </div>
-</header>
-
+  </header>
   
-  <main>
-    <h2>Welcome!</h2>
-    <button onclick="testBackend()">Test Backend Connection</button>
-    <div id="result"></div>
+  <main class="container">
+    <section class="hero">
+      <h2>Welcome to Our Store</h2>
+      <p>Find the best products at great prices</p>
+      <a href="products.html" class="btn-primary">Shop Now</a>
+    </section>
+    
+    <section class="featured-products">
+      <h2>Featured Products</h2>
+      <div id="featured-products-container" class="products-grid">
+        <p>Loading products...</p>
+      </div>
+    </section>
   </main>
   
-  <script>
-    async function testBackend() {
-      try {
-        const response = await fetch('http://127.0.0.1:3000/api/test');
-        const data = await response.json();
-        document.getElementById('result').innerHTML = 
-          '<p style="color: green;">✅ ' + data.message + '</p>';
-      } catch (error) {
-        document.getElementById('result').innerHTML = 
-          '<p style="color: red;">❌ Backend not reachable</p>';
-      }
-    }
-  </script>
-  <script src="js/auth-check.js"></script>
+  <footer>
+    <div class="container">
+      <p>&copy; 2025 My E-Commerce Store. All rights reserved.</p>
+    </div>
+  </footer>
+  
+  <!-- External Scripts -->
+  <script src="js/config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/main.js"></script>
+  <script src="js/home.js"></script>
+  
 </body>
 </html>
