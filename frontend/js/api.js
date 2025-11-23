@@ -8,10 +8,24 @@ const API = {
     return localStorage.getItem('token');
   },
   
+  // Set authentication token
+  setToken(token) {
+    localStorage.setItem('token', token);
+  },
+  
+  // Remove token (logout)
+  clearToken() {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+  },
+  
   // Get user ID
   getUserId() {
     const user = getCurrentUser();
-    return user ? (user.id || 'test_user') : 'test_user';
+    if (!user || !user.id) {
+      return null;
+    }
+    return user.id;
   },
   
   // Make API request
@@ -50,77 +64,112 @@ const API = {
     }
   },
   
-  // Products
+  // Helper methods for HTTP verbs
+  async get(endpoint) {
+    return this.request(endpoint, { method: 'GET' });
+  },
+  
+  async post(endpoint, data) {
+    return this.request(endpoint, {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  },
+  
+  async put(endpoint, data) {
+    return this.request(endpoint, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+  },
+  
+  async delete(endpoint) {
+    return this.request(endpoint, { method: 'DELETE' });
+  },
+  
+  // === PRODUCTS ===
+  
   async getProducts(filters = {}) {
     const params = new URLSearchParams(filters);
-    return this.request(`/products?${params}`);
+    return this.get(`/products?${params}`);
   },
   
   async getProduct(id) {
-    return this.request(`/products/${id}`);
+    return this.get(`/products/${id}`);
   },
   
-  // Cart
+  async getCategories() {
+    return this.get('/categories');
+  },
+  
+  // === CART ===
+  
   async getCart(userId = null) {
     userId = userId || this.getUserId();
-    return this.request(`/cart?user_id=${userId}`);
+    if (!userId) {
+      throw new Error('Please login first');
+    }
+    return this.get(`/cart?user_id=${userId}`);
   },
   
   async addToCart(productId, quantity = 1, userId = null) {
     userId = userId || this.getUserId();
-    return this.request('/cart', {
-      method: 'POST',
-      body: JSON.stringify({ user_id: userId, product_id: productId, quantity })
+    
+    if (!userId) {
+      throw new Error('Please login first');
+    }
+    
+    return this.post('/cart', { 
+      user_id: userId,
+      product_id: productId, 
+      quantity 
     });
   },
   
   async updateCartItem(cartId, quantity) {
-    return this.request(`/cart/${cartId}`, {
-      method: 'PUT',
-      body: JSON.stringify({ quantity })
-    });
+    return this.put(`/cart/${cartId}`, { quantity });
   },
   
   async removeFromCart(cartId) {
-    return this.request(`/cart/${cartId}`, { method: 'DELETE' });
+    return this.delete(`/cart/${cartId}`);
   },
   
-  // Orders
+  // === ORDERS ===
+  
   async createOrder(orderData) {
     orderData.user_id = orderData.user_id || this.getUserId();
-    return this.request('/orders', {
-      method: 'POST',
-      body: JSON.stringify(orderData)
-    });
+    return this.post('/orders', orderData);
   },
   
   async getOrders(userId = null) {
     userId = userId || this.getUserId();
-    return this.request(`/orders?user_id=${userId}`);
+    return this.get(`/orders?user_id=${userId}`);
   },
   
   async getOrder(orderId) {
-    return this.request(`/orders/${orderId}`);
+    return this.get(`/orders/${orderId}`);
   },
   
   async cancelOrder(orderId) {
-    return this.request(`/orders/${orderId}/cancel`, { method: 'POST' });
+    return this.post(`/orders/${orderId}/cancel`, {});
   },
   
-  // Auth
+  // === AUTH ===
+  
   async login(email, password) {
-    return this.request('/auth/login', {
-      method: 'POST',
-      body: JSON.stringify({ email, password })
-    });
+    return this.post('/auth/login', { email, password });
   },
   
   async register(name, email, password) {
-    return this.request('/auth/register', {
-      method: 'POST',
-      body: JSON.stringify({ name, email, password })
-    });
+    return this.post('/auth/register', { name, email, password });
   },
+  
+  async logout() {
+    this.clearToken();
+    return { message: 'Logged out successfully' };
+  },
+  
+  // === ADMIN ===
   
   // Admin - Image Upload
   async uploadImage(formData) {
@@ -150,22 +199,14 @@ const API = {
   
   // Admin - Product Management
   async createProduct(productData) {
-    return this.request('/admin/products', {
-      method: 'POST',
-      body: JSON.stringify(productData)
-    });
+    return this.post('/admin/products', productData);
   },
   
   async updateProduct(productId, updates) {
-    return this.request(`/admin/products/${productId}`, {
-      method: 'PUT',
-      body: JSON.stringify(updates)
-    });
+    return this.put(`/admin/products/${productId}`, updates);
   },
   
   async deleteProduct(productId) {
-    return this.request(`/admin/products/${productId}`, {
-      method: 'DELETE'
-    });
+    return this.delete(`/admin/products/${productId}`);
   }
 };

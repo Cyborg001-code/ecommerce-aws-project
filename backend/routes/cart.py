@@ -6,8 +6,11 @@ cart_bp = Blueprint('cart', __name__)
 
 @cart_bp.route('/cart', methods=['GET'])
 def get_cart():
-    """Get user's cart (for now, use a test user_id)"""
-    user_id = request.args.get('user_id', 'test_user')
+    """Get user's cart"""
+    user_id = request.args.get('user_id')
+    
+    if not user_id:
+        return jsonify({'error': 'User ID required'}), 400
     
     conn = get_db_connection()
     if not conn:
@@ -20,7 +23,7 @@ def get_cart():
             SELECT c.id, c.quantity, p.id as product_id, p.name, p.price, p.image_key, p.stock
             FROM cart c
             JOIN products p ON c.product_id = p.id
-            WHERE c.user_id = %s
+            WHERE c.user_id = %s AND p.is_active = true
         """, (user_id,))
         
         items = cursor.fetchall()
@@ -28,7 +31,7 @@ def get_cart():
         # Calculate total
         total = sum(float(item['price']) * item['quantity'] for item in items)
         
-        # Add image URLs - FIXED
+        # Add image URLs
         bucket_name = os.getenv('S3_IMAGES_BUCKET', 'ecommerce-images-ankush-2025')
         region = os.getenv('AWS_REGION', 'us-east-1')
         
@@ -46,6 +49,8 @@ def get_cart():
         
     except Exception as e:
         print(f"Error fetching cart: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': 'Failed to fetch cart'}), 500
         
     finally:
@@ -57,9 +62,17 @@ def get_cart():
 def add_to_cart():
     """Add item to cart"""
     data = request.json
-    user_id = data.get('user_id', 'test_user')
+    
+    # Get user_id from request
+    user_id = data.get('user_id')
     product_id = data.get('product_id')
     quantity = data.get('quantity', 1)
+    
+    print(f"Add to cart request: user_id={user_id}, product_id={product_id}, quantity={quantity}")
+    
+    # Validate inputs
+    if not user_id:
+        return jsonify({'error': 'User ID required. Please login first.'}), 400
     
     if not product_id:
         return jsonify({'error': 'Product ID required'}), 400
@@ -71,6 +84,20 @@ def add_to_cart():
     cursor = conn.cursor()
     
     try:
+        # First, check if product exists and has stock
+        cursor.execute("""
+            SELECT id, name, stock FROM products 
+            WHERE id = %s AND is_active = true
+        """, (product_id,))
+        
+        product = cursor.fetchone()
+        
+        if not product:
+            return jsonify({'error': 'Product not found or inactive'}), 404
+        
+        if product['stock'] < quantity:
+            return jsonify({'error': f'Insufficient stock. Only {product["stock"]} available.'}), 400
+        
         # Check if item already in cart
         cursor.execute("""
             SELECT id, quantity FROM cart 
@@ -82,21 +109,30 @@ def add_to_cart():
         if existing:
             # Update quantity
             new_quantity = existing['quantity'] + quantity
+            
+            # Check stock again
+            if new_quantity > product['stock']:
+                return jsonify({'error': f'Cannot add more. Only {product["stock"]} available.'}), 400
+            
             cursor.execute("""
                 UPDATE cart SET quantity = %s WHERE id = %s
             """, (new_quantity, existing['id']))
+            print(f"Updated cart item {existing['id']} to quantity {new_quantity}")
         else:
             # Insert new item
             cursor.execute("""
                 INSERT INTO cart (user_id, product_id, quantity)
                 VALUES (%s, %s, %s)
             """, (user_id, product_id, quantity))
+            print(f"Added new cart item: product {product_id}, quantity {quantity}")
         
         conn.commit()
         return jsonify({'message': 'Added to cart successfully'}), 200
         
     except Exception as e:
         print(f"Error adding to cart: {e}")
+        import traceback
+        traceback.print_exc()
         conn.rollback()
         return jsonify({'error': 'Failed to add to cart'}), 500
         
