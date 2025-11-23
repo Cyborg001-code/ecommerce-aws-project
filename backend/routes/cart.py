@@ -1,5 +1,6 @@
 from flask import Blueprint, jsonify, request
 from config.database import get_db_connection
+import os
 
 cart_bp = Blueprint('cart', __name__)
 
@@ -27,10 +28,15 @@ def get_cart():
         # Calculate total
         total = sum(float(item['price']) * item['quantity'] for item in items)
         
-        # Add image URLs
-        cloudfront_domain = "https://your-cloudfront-domain.net"
+        # Add image URLs - FIXED
+        bucket_name = os.getenv('S3_IMAGES_BUCKET', 'ecommerce-images-ankush-2025')
+        region = os.getenv('AWS_REGION', 'us-east-1')
+        
         for item in items:
-            item['imageUrl'] = f"{cloudfront_domain}/images/{item['image_key']}"
+            if item.get('image_key'):
+                item['imageUrl'] = f"https://{bucket_name}.s3.{region}.amazonaws.com/{item['image_key']}"
+            else:
+                item['imageUrl'] = f"https://via.placeholder.com/100?text={item['name']}"
         
         return jsonify({
             'items': items,
