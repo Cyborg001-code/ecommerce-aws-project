@@ -70,14 +70,19 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
       
+      // Get form values
+      const name = document.getElementById('name').value.trim();
+      const email = document.getElementById('email').value.trim();
+      const phone = document.getElementById('phone').value.trim();
+      const address = document.getElementById('address').value.trim();
+      const city = document.getElementById('city').value.trim();
+      const postal = document.getElementById('postal').value.trim();
+      
+      // Build shipping address string
+      const shippingAddress = `${name}\n${email}\n${phone}\n${address}\n${city}, ${postal}`;
+      
       const orderData = {
-        name: document.getElementById('name').value,
-        email: document.getElementById('email').value,
-        phone: document.getElementById('phone').value,
-        address: document.getElementById('address').value,
-        city: document.getElementById('city').value,
-        postal_code: document.getElementById('postal').value,
-        total_amount: cartData.total + 10
+        shipping_address: shippingAddress
       };
       
       try {

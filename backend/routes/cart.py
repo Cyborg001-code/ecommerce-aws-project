@@ -12,6 +12,9 @@ def get_cart():
     if not user_id:
         return jsonify({'error': 'User ID required'}), 400
     
+    # Convert to string to match database VARCHAR type
+    user_id = str(user_id)
+    
     conn = get_db_connection()
     if not conn:
         return jsonify({'error': 'Database connection failed'}), 500
@@ -48,10 +51,10 @@ def get_cart():
         }), 200
         
     except Exception as e:
-        print(f"Error fetching cart: {e}")
+        print(f"❌ Error fetching cart: {e}")
         import traceback
         traceback.print_exc()
-        return jsonify({'error': 'Failed to fetch cart'}), 500
+        return jsonify({'error': str(e)}), 500
         
     finally:
         cursor.close()
@@ -63,42 +66,77 @@ def add_to_cart():
     """Add item to cart"""
     data = request.json
     
-    # Get user_id from request
+    # Get data from request
     user_id = data.get('user_id')
     product_id = data.get('product_id')
     quantity = data.get('quantity', 1)
     
-    print(f"Add to cart request: user_id={user_id}, product_id={product_id}, quantity={quantity}")
+    print(f"📥 Add to cart request:")
+    print(f"   user_id: {user_id} (type: {type(user_id).__name__})")
+    print(f"   product_id: {product_id} (type: {type(product_id).__name__})")
+    print(f"   quantity: {quantity}")
     
     # Validate inputs
     if not user_id:
+        print("❌ Error: User ID missing")
         return jsonify({'error': 'User ID required. Please login first.'}), 400
     
     if not product_id:
+        print("❌ Error: Product ID missing")
         return jsonify({'error': 'Product ID required'}), 400
+    
+    # Convert user_id to string (database expects VARCHAR)
+    user_id = str(user_id)
+    
+    # Convert product_id to integer
+    try:
+        product_id = int(product_id)
+    except (ValueError, TypeError):
+        print(f"❌ Error: Invalid product_id: {product_id}")
+        return jsonify({'error': 'Invalid product ID'}), 400
+    
+    # Convert quantity to integer
+    try:
+        quantity = int(quantity)
+        if quantity < 1:
+            raise ValueError("Quantity must be positive")
+    except (ValueError, TypeError):
+        print(f"❌ Error: Invalid quantity: {quantity}")
+        return jsonify({'error': 'Invalid quantity'}), 400
     
     conn = get_db_connection()
     if not conn:
+        print("❌ Error: Database connection failed")
         return jsonify({'error': 'Database connection failed'}), 500
     
     cursor = conn.cursor()
     
     try:
         # First, check if product exists and has stock
+        print(f"🔍 Checking product {product_id}...")
         cursor.execute("""
-            SELECT id, name, stock FROM products 
-            WHERE id = %s AND is_active = true
+            SELECT id, name, stock, is_active FROM products 
+            WHERE id = %s
         """, (product_id,))
         
         product = cursor.fetchone()
         
         if not product:
-            return jsonify({'error': 'Product not found or inactive'}), 404
+            print(f"❌ Product {product_id} not found")
+            return jsonify({'error': 'Product not found'}), 404
+        
+        if not product['is_active']:
+            print(f"❌ Product {product_id} is inactive")
+            return jsonify({'error': 'Product is not available'}), 404
         
         if product['stock'] < quantity:
+            print(f"❌ Insufficient stock: requested {quantity}, available {product['stock']}")
             return jsonify({'error': f'Insufficient stock. Only {product["stock"]} available.'}), 400
         
+        print(f"✅ Product found: {product['name']}, stock: {product['stock']}")
+        
         # Check if item already in cart
+        print(f"🔍 Checking if item exists in cart for user {user_id}...")
         cursor.execute("""
             SELECT id, quantity FROM cart 
             WHERE user_id = %s AND product_id = %s
@@ -107,34 +145,39 @@ def add_to_cart():
         existing = cursor.fetchone()
         
         if existing:
+            print(f"📝 Item exists in cart (id: {existing['id']}), updating quantity...")
             # Update quantity
             new_quantity = existing['quantity'] + quantity
             
             # Check stock again
             if new_quantity > product['stock']:
+                print(f"❌ Cannot add more. Total would be {new_quantity}, stock is {product['stock']}")
                 return jsonify({'error': f'Cannot add more. Only {product["stock"]} available.'}), 400
             
             cursor.execute("""
                 UPDATE cart SET quantity = %s WHERE id = %s
             """, (new_quantity, existing['id']))
-            print(f"Updated cart item {existing['id']} to quantity {new_quantity}")
+            print(f"✅ Updated cart item {existing['id']} to quantity {new_quantity}")
         else:
+            print(f"📝 Adding new item to cart...")
             # Insert new item
             cursor.execute("""
-                INSERT INTO cart (user_id, product_id, quantity)
-                VALUES (%s, %s, %s)
+                INSERT INTO cart (user_id, product_id, quantity, created_at)
+                VALUES (%s, %s, %s, NOW())
             """, (user_id, product_id, quantity))
-            print(f"Added new cart item: product {product_id}, quantity {quantity}")
+            print(f"✅ Added new cart item: product {product_id}, quantity {quantity}")
         
         conn.commit()
+        print("✅ Cart updated successfully!")
         return jsonify({'message': 'Added to cart successfully'}), 200
         
     except Exception as e:
-        print(f"Error adding to cart: {e}")
+        print(f"❌ Error adding to cart: {e}")
+        print(f"❌ Error type: {type(e).__name__}")
         import traceback
         traceback.print_exc()
         conn.rollback()
-        return jsonify({'error': 'Failed to add to cart'}), 500
+        return jsonify({'error': f'Failed to add to cart: {str(e)}'}), 500
         
     finally:
         cursor.close()

@@ -9,73 +9,109 @@ orders_bp = Blueprint('orders', __name__)
 def create_order():
     """Create new order from cart"""
     data = request.json
-    user_id = data.get('user_id', 'test_user')
+    
+    # Get user_id
+    user_id = data.get('user_id')
+    
+    if not user_id:
+        print("❌ Error: User ID missing")
+        return jsonify({'error': 'User ID required. Please login first.'}), 400
+    
+    # Convert to string to match cart table
+    user_id = str(user_id)
+    
+    # Get shipping address (optional)
     shipping_address = data.get('shipping_address', '')
+    
+    print(f"\n📦 Creating order for user: {user_id}")
+    print(f"   Shipping address: {shipping_address}")
     
     conn = get_db_connection()
     if not conn:
+        print("❌ Error: Database connection failed")
         return jsonify({'error': 'Database connection failed'}), 500
     
     cursor = conn.cursor()
     
     try:
         # Get cart items
+        print(f"🔍 Fetching cart items for user {user_id}...")
         cursor.execute("""
-            SELECT c.product_id, c.quantity, p.price, p.stock
+            SELECT c.product_id, c.quantity, p.price, p.stock, p.name
             FROM cart c
             JOIN products p ON c.product_id = p.id
-            WHERE c.user_id = %s
+            WHERE c.user_id = %s AND p.is_active = true
         """, (user_id,))
         
         cart_items = cursor.fetchall()
         
         if not cart_items:
+            print("❌ Error: Cart is empty")
             return jsonify({'error': 'Cart is empty'}), 400
+        
+        print(f"✅ Found {len(cart_items)} items in cart")
         
         # Calculate total
         total_amount = sum(float(item['price']) * item['quantity'] for item in cart_items)
+        print(f"💰 Order total: ${total_amount:.2f}")
         
         # Check stock availability
+        print("🔍 Checking stock availability...")
         for item in cart_items:
             if item['quantity'] > item['stock']:
-                return jsonify({'error': f'Insufficient stock for product {item["product_id"]}'}), 400
+                print(f"❌ Insufficient stock for {item['name']}: requested {item['quantity']}, available {item['stock']}")
+                return jsonify({'error': f'Insufficient stock for {item["name"]}. Only {item["stock"]} available.'}), 400
+        
+        print("✅ All items have sufficient stock")
         
         # Create order
+        print("📝 Creating order record...")
         cursor.execute("""
-            INSERT INTO orders (user_id, total_amount, shipping_address, status)
-            VALUES (%s, %s, %s, 'pending')
+            INSERT INTO orders (user_id, total_amount, shipping_address, status, created_at)
+            VALUES (%s, %s, %s, 'pending', NOW())
             RETURNING id
         """, (user_id, total_amount, shipping_address))
         
-        order_id = cursor.fetchone()['id']
+        order_result = cursor.fetchone()
+        order_id = order_result['id']
+        print(f"✅ Order created with ID: {order_id}")
         
         # Create order items and update stock
+        print("📝 Creating order items...")
         for item in cart_items:
+            # Insert order item
             cursor.execute("""
-                INSERT INTO order_items (order_id, product_id, quantity, price)
-                VALUES (%s, %s, %s, %s)
+                INSERT INTO order_items (order_id, product_id, quantity, price, created_at)
+                VALUES (%s, %s, %s, %s, NOW())
             """, (order_id, item['product_id'], item['quantity'], item['price']))
             
             # Update product stock
             cursor.execute("""
                 UPDATE products SET stock = stock - %s WHERE id = %s
             """, (item['quantity'], item['product_id']))
+            
+            print(f"   ✅ Added {item['name']} (qty: {item['quantity']}) to order")
         
         # Clear cart
+        print("🗑️  Clearing cart...")
         cursor.execute("DELETE FROM cart WHERE user_id = %s", (user_id,))
         
         conn.commit()
+        print(f"✅ Order {order_id} completed successfully!")
         
         return jsonify({
             'message': 'Order placed successfully',
             'order_id': order_id,
-            'total': total_amount
+            'total': float(total_amount)
         }), 200
         
     except Exception as e:
-        print(f"Error creating order: {e}")
+        print(f"❌ Error creating order: {e}")
+        print(f"❌ Error type: {type(e).__name__}")
+        import traceback
+        traceback.print_exc()
         conn.rollback()
-        return jsonify({'error': 'Failed to create order'}), 500
+        return jsonify({'error': f'Failed to create order: {str(e)}'}), 500
         
     finally:
         cursor.close()
@@ -85,7 +121,13 @@ def create_order():
 @orders_bp.route('/orders', methods=['GET'])
 def get_orders():
     """Get user's orders"""
-    user_id = request.args.get('user_id', 'test_user')
+    user_id = request.args.get('user_id')
+    
+    if not user_id:
+        return jsonify({'error': 'User ID required'}), 400
+    
+    # Convert to string
+    user_id = str(user_id)
     
     conn = get_db_connection()
     if not conn:
@@ -141,7 +183,7 @@ def get_order(order_id):
         
         items = cursor.fetchall()
         
-        # Add image URLs - FIXED
+        # Add image URLs
         bucket_name = os.getenv('S3_IMAGES_BUCKET', 'ecommerce-images-ankush-2025')
         region = os.getenv('AWS_REGION', 'us-east-1')
         
