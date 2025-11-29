@@ -43,16 +43,26 @@ function displayOrders(orders) {
     
     const statusColor = statusColors[order.status] || '#6b7280';
     
-    // Parse shipping address
-    let addressLines = [];
-    if (order.shipping_address) {
-      addressLines = order.shipping_address.split('\n').filter(line => line.trim());
-    }
+    // Parse shipping address - IMPROVED HANDLING
+    let name = 'Customer';
+    let email = '';
+    let phone = '';
+    let fullAddress = 'Address not provided';
     
-    const name = addressLines[0] || 'N/A';
-    const email = addressLines[1] || '';
-    const phone = addressLines[2] || '';
-    const fullAddress = addressLines.slice(3).join(', ') || 'N/A';
+    if (order.shipping_address && order.shipping_address.trim()) {
+      const addressLines = order.shipping_address.split('\n').filter(line => line.trim());
+      
+      if (addressLines.length >= 4) {
+        // New format: Name, Email, Phone, Address, City+Postal
+        name = addressLines[0] || 'Customer';
+        email = addressLines[1] || '';
+        phone = addressLines[2] || '';
+        fullAddress = addressLines.slice(3).join(', ') || 'Address not provided';
+      } else if (addressLines.length > 0) {
+        // Old format or partial data
+        fullAddress = addressLines.join(', ');
+      }
+    }
     
     orderCard.innerHTML = `
       <div class="order-header">
@@ -72,15 +82,11 @@ function displayOrders(orders) {
       
       <div class="order-body" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee;">
         <div style="margin-bottom: 15px;">
-          <strong>Shipping Address:</strong><br>
+          <strong>Shipping To:</strong><br>
           ${name}<br>
           ${email ? email + '<br>' : ''}
-          ${phone ? phone + '<br>' : ''}
+          ${phone ? 'Phone: ' + phone + '<br>' : ''}
           ${fullAddress}
-        </div>
-        
-        <div style="margin-bottom: 15px;">
-          <strong>Contact:</strong> ${phone || 'N/A'}
         </div>
         
         <div id="order-items-${order.id}" style="margin-top: 20px;">
@@ -101,43 +107,6 @@ function displayOrders(orders) {
     // Load items for this order
     loadOrderItems(order.id);
   });
-}
-
-async function loadOrderItems(orderId) {
-  try {
-    const order = await API.getOrder(orderId);
-    const itemsContainer = document.getElementById(`order-items-${orderId}`);
-    
-    if (!itemsContainer) return;
-    
-    if (order.items && order.items.length > 0) {
-      itemsContainer.innerHTML = `
-        <strong>Items:</strong><br>
-        <div style="margin-top: 10px;">
-          ${order.items.map(item => `
-            <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f0f0f0;">
-              <span>${item.name} x ${item.quantity}</span>
-              <span style="font-weight: 600;">${formatPrice(item.price * item.quantity)}</span>
-            </div>
-          `).join('')}
-        </div>
-      `;
-    } else {
-      itemsContainer.innerHTML = `
-        <strong>Items:</strong><br>
-        <div style="margin-top: 10px; color: #6b7280;">No items found</div>
-      `;
-    }
-  } catch (error) {
-    console.error(`Error loading items for order ${orderId}:`, error);
-    const itemsContainer = document.getElementById(`order-items-${orderId}`);
-    if (itemsContainer) {
-      itemsContainer.innerHTML = `
-        <strong>Items:</strong><br>
-        <div style="margin-top: 10px; color: #ef4444;">Failed to load items</div>
-      `;
-    }
-  }
 }
 
 async function viewOrderDetails(orderId) {

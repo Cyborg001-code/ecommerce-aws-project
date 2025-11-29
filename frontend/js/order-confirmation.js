@@ -24,16 +24,26 @@ async function loadOrderConfirmation() {
 function displayOrderConfirmation(order) {
   const container = document.getElementById('order-details');
   
-  // Parse shipping address
-  let addressLines = [];
-  if (order.shipping_address) {
-    addressLines = order.shipping_address.split('\n').filter(line => line.trim());
-  }
+  // Parse shipping address - IMPROVED HANDLING
+  let name = 'Customer';
+  let email = '';
+  let phone = '';
+  let fullAddress = 'Address not provided';
   
-  const name = addressLines[0] || 'N/A';
-  const email = addressLines[1] || '';
-  const phone = addressLines[2] || '';
-  const fullAddress = addressLines.slice(3).join('<br>') || 'N/A';
+  if (order.shipping_address && order.shipping_address.trim()) {
+    const addressLines = order.shipping_address.split('\n').filter(line => line.trim());
+    
+    if (addressLines.length >= 4) {
+      // New format: Name, Email, Phone, Address, City+Postal
+      name = addressLines[0] || 'Customer';
+      email = addressLines[1] || '';
+      phone = addressLines[2] || '';
+      fullAddress = addressLines.slice(3).join('<br>') || 'Address not provided';
+    } else if (addressLines.length > 0) {
+      // Old format or partial data
+      fullAddress = addressLines.join('<br>');
+    }
+  }
   
   const statusColors = {
     'pending': '#f59e0b',
@@ -62,17 +72,17 @@ function displayOrderConfirmation(order) {
     </div>
     
     <div class="shipping-info" style="background: #f8f9fa; padding: 20px; border-radius: 6px; margin-bottom: 30px;">
-      <h3>Shipping Address</h3>
+      <h3>Shipping Information</h3>
       <div style="margin-top: 15px; line-height: 1.8;">
         <strong>${name}</strong><br>
         ${email ? email + '<br>' : ''}
-        ${phone ? phone + '<br>' : ''}
-        ${fullAddress}
+        ${phone ? 'Phone: ' + phone + '<br>' : ''}
+        <div style="margin-top: 10px;">${fullAddress}</div>
       </div>
     </div>
     
     <div class="order-items-list">
-      <h3>Items</h3>
+      <h3>Items Ordered</h3>
       ${order.items && order.items.length > 0 ? 
         order.items.map(item => `
           <div class="order-item" style="display: flex; align-items: center; gap: 15px; padding: 15px; background: #f8f9fa; border-radius: 6px; margin-bottom: 10px;">
@@ -86,7 +96,7 @@ function displayOrderConfirmation(order) {
             <p class="item-price" style="font-weight: bold; color: #007bff;">${formatPrice(item.price * item.quantity)}</p>
           </div>
         `).join('') 
-        : '<p>No items found</p>'
+        : '<p style="padding: 20px; text-align: center; color: #666;">No items found</p>'
       }
     </div>
   `;
