@@ -1,8 +1,9 @@
 from config.database import get_db_connection
-import hashlib
+import bcrypt
 
 def hash_password(password):
-    return hashlib.sha256(password.encode()).hexdigest()
+    """Secure password hashing with bcrypt"""
+    return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
 def create_admin():
     """Create admin account"""
@@ -38,7 +39,7 @@ def create_admin():
             print("✅ Existing account set as admin")
             
         else:
-            # Create new admin account
+            # Create new admin account with bcrypt
             hashed_password = hash_password(admin_password)
             
             cursor.execute("""
