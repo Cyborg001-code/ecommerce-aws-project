@@ -113,4 +113,32 @@ async function viewOrderDetails(orderId) {
   window.location.href = `order-confirmation.html?order_id=${orderId}`;
 }
 
+async function loadOrderItems(orderId) {
+  try {
+    const order = await API.getOrder(orderId);
+    const container = document.getElementById(`order-items-${orderId}`);
+    
+    if (!container) return;
+    
+    if (!order.items || order.items.length === 0) {
+      container.innerHTML = '<div style="margin-top: 10px; color: #666;">No items found</div>';
+      return;
+    }
+    
+    container.innerHTML = `
+      <strong>Items:</strong><br>
+      <div style="margin-top: 10px;">
+        ${order.items.map(item => `
+          <div style="margin-bottom: 8px;">
+            • ${item.name} (Qty: ${item.quantity}) - ${formatPrice(item.price * item.quantity)}
+          </div>
+        `).join('')}
+      </div>
+    `;
+    
+  } catch (error) {
+    console.error('Error loading order items:', error);
+  }
+}
+
 document.addEventListener('DOMContentLoaded', loadOrders);

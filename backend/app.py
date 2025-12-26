@@ -8,7 +8,11 @@ from routes.admin import admin_bp
 from routes.auth import auth_bp
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, origins=[
+    'http://localhost:8000',
+    'http://127.0.0.1:8000',
+    'http://ecommerce-frontend-ankush-2025.s3-website-us-east-1.amazonaws.com'
+], supports_credentials=True, allow_headers=['Content-Type', 'Authorization'])
 
 # Register blueprints
 app.register_blueprint(products_bp, url_prefix='/api')
