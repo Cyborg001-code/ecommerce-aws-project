@@ -11,7 +11,10 @@ app = Flask(__name__)
 CORS(app, origins=[
     'http://localhost:8000',
     'http://127.0.0.1:8000',
-    'http://ecommerce-frontend-ankush-2025.s3-website-us-east-1.amazonaws.com'
+    'http://ecommerce-frontend-ankush-2025.s3-website-us-east-1.amazonaws.com',
+    'https://mydukan.run.place',
+    'https://www.mydukan.run.place',
+    'https://api.mydukan.run.place'
 ], supports_credentials=True, allow_headers=['Content-Type', 'Authorization'])
 
 # Register blueprints
